@@ -1,4 +1,4 @@
-# app_final.py - FIXED VERSION
+# app_final.py 
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -244,24 +244,6 @@ if mutation_input and protein_choice:
                 <p><small>This variant likely has minimal impact on protein structure.</small></p>
             </div>
             """, unsafe_allow_html=True)
-    
-    with col2:
-        st.subheader("🔬 Quick Guide")
-        st.markdown("""
-        **Test Examples:**
-        - GBA: L444P
-        - CFTR: F508del
-        - MECP2: R255X
-        
-        **Features Analyzed:**
-        1. Protein confidence (pLDDT)
-        2. Confidence consistency
-        3. Unreliable regions
-        4. Mutation impact
-        5. Structural change
-        
-        **Note:** This is a research prototype.
-        """)
         
         st.subheader("🏗️ 3D Structure")
         uniprot_ids = {'GBA': 'P04062', 'CFTR': 'P13569', 'MECP2': 'P51608', 
