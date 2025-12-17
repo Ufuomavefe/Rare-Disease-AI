@@ -273,7 +273,7 @@ if mutation_input and protein_choice:
 else:
     # Welcome screen
     st.markdown("""
-    ## Welcome to Your Dissertation App
+    ## Ufuoma's MSc AI Technology Dissertation App
     
     This application demonstrates the integration of:
     
