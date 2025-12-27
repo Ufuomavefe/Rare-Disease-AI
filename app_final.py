@@ -208,6 +208,8 @@ if protein_choice:
     st.sidebar.write(f"**Structure Confidence:** {protein['avg_plddt']:.1f}/100 pLDDT")
     st.sidebar.write(f"**Reliable Regions:** {protein['confidence_ratio']:.1%}")
 
+# Find this section in your app_final.py and REPLACE it with:
+
 # Main content
 if mutation_input and protein_choice:
     protein = PROTEIN_DATA[protein_choice]
@@ -250,7 +252,7 @@ if mutation_input and protein_choice:
         with metric_col2:
             st.metric("Reliable Regions", f"{protein['confidence_ratio']:.1%}")
             st.metric("Low Confidence Areas", protein['low_conf_residues'])
-            st.metric("Protein Length", protein['total_residues'])
+            st.metric("Protein Length", protein['total_residues"])
         
         st.subheader("🤖 AI Prediction")
         
@@ -270,43 +272,65 @@ if mutation_input and protein_choice:
                 <p><small>This variant likely has minimal impact on protein structure.</small></p>
             </div>
             """, unsafe_allow_html=True)
+    
+    with col2:
+        st.subheader("🔬 Quick Guide")
+        st.markdown("""
+        **Test Examples:**
+        - GBA: L444P
+        - CFTR: F508del
+        - MECP2: R255X
         
-        st.subheader("🏗️ 3D Structure")
+        **Features Analyzed:**
+        1. Protein confidence (pLDDT)
+        2. Confidence consistency
+        3. Unreliable regions
+        4. Mutation impact
+        5. Structural change
+        
+        **Note:** This is a research prototype.
+        """)
+        
+        # ========== 3D VIEWER SECTION - CORRECTED ==========
+        st.subheader("🏗️ 3D Protein Structure Viewer")
+        
+        # UniProt ID mapping
         uniprot_ids = {'GBA': 'P04062', 'CFTR': 'P13569', 'MECP2': 'P51608', 
                       'GAA': 'P10253', 'HEXA': 'P06865'}
         
-if protein_choice in uniprot_ids:
-# --- In your results section, after making a prediction ---
-    st.subheader("🏗️ 3D Protein Structure Viewer")
-
-    uniprot_ids = {'GBA': 'P04062', 'CFTR': 'P13569', 'MECP2': 'P51608',
-              'GAA': 'P10253', 'HEXA': 'P06865'}
-
-if protein_choice in uniprot_ids:
-    uniprot_id = uniprot_ids[protein_choice]
-
-    # Display the interactive 3D viewer
-    structure_html = display_3d_structure(uniprot_id)
-    st.components.v1.html(structure_html, height=550)
-
-    # You can keep the link as a useful backup/alternative
-    st.markdown(f"*🔗 Open this structure in the [AlphaFold Database](https://alphafold.ebi.ac.uk/entry/{uniprot_id}) for additional tools and details.*")
-
-    # Add a legend for the color scheme
-    with st.expander("**🎨 Color Legend for this 3D Model**"):
-        st.markdown("""
-        The protein chain is colored by **predicted local confidence (pLDDT score)**:
-        - **🔴 Red (50-60)**: Low confidence - The structure here is very uncertain.
-        - **🟠 Orange/Yellow (60-80)**: Medium confidence.
-        - **🟢 Green/Blue (80-90)**: High confidence - The predicted structure is reliable.
-        - **🔵 Blue (>90)**: Very high confidence.
-        - **⚪ White Sticks**: Regions with pLDDT < 70 are also shown as thin sticks to highlight uncertainty.
-        """)
+        # Check if protein is in our mapping
+        if protein_choice in uniprot_ids:
+            uniprot_id = uniprot_ids[protein_choice]
+            
+            try:
+                # Display the interactive 3D viewer
+                structure_html = display_3d_structure(uniprot_id)
+                st.components.v1.html(structure_html, height=550)
+                
+                # Keep the link as a backup
+                st.markdown(f"*🔗 Open this structure in the [AlphaFold Database](https://alphafold.ebi.ac.uk/entry/{uniprot_id}) for additional tools and details.*")
+                
+                # Add a legend for the color scheme
+                with st.expander("**🎨 Color Legend for this 3D Model**"):
+                    st.markdown("""
+                    The protein chain is colored by **predicted local confidence (pLDDT score)**:
+                    - **🔴 Red (50-60)**: Low confidence - The structure here is very uncertain.
+                    - **🟠 Orange/Yellow (60-80)**: Medium confidence.
+                    - **🟢 Green/Blue (80-90)**: High confidence - The predicted structure is reliable.
+                    - **🔵 Blue (>90)**: Very high confidence.
+                    - **⚪ White Sticks**: Regions with pLDDT < 70 are also shown as thin sticks to highlight uncertainty.
+                    """)
+            except Exception as e:
+                st.warning(f"Could not load 3D structure. Error: {str(e)}")
+                st.markdown(f"[View {protein_choice} on AlphaFold DB](https://alphafold.ebi.ac.uk/entry/{uniprot_id})")
+        else:
+            st.info("3D structure viewer not available for this protein selection.")
+        # ========== END 3D VIEWER SECTION ==========
 
 else:
-    # Welcome screen
+    # Welcome screen (when no protein/mutation selected)
     st.markdown("""
-    ## Ufuoma's MSc AI Technology Dissertation App
+    ## Welcome to Your Dissertation App
     
     This application demonstrates the integration of:
     
