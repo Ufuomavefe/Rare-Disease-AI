@@ -302,8 +302,7 @@ if protein_choice in uniprot_ids:
         - **🔵 Blue (>90)**: Very high confidence.
         - **⚪ White Sticks**: Regions with pLDDT < 70 are also shown as thin sticks to highlight uncertainty.
         """)
-else:
-    st.info("3D structure viewer not available for this protein selection.")
+
 else:
     # Welcome screen
     st.markdown("""
