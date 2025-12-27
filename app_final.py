@@ -157,6 +157,32 @@ def calculate_features(protein, mutation):
         plddt_difference
     ]
 
+def display_3d_structure(uniprot_id, width=800, height=500):
+    """
+    Fetches and displays an interactive 3D structure from the AlphaFold database.
+    Colors the structure by model confidence (pLDDT).
+    """
+    import py3Dmol
+
+    # Construct the URL to the AlphaFold structure file (in PDB format)
+    af_structure_url = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"
+
+    # Create the py3Dmol viewer object
+    viewer = py3Dmol.view(query=f'pdb:{af_structure_url}', width=width, height=height)
+
+    # Style the entire structure as a cartoon, colored by confidence (pLDDT b-factor)
+    viewer.setStyle({'cartoon': {'colorscheme': {'prop':'b','gradient': 'roygb','min':50,'max':90}}})
+
+    # Optional: Add a visual overlay to highlight low confidence regions (pLDDT < 70)
+    viewer.addStyle({'b': {'<': 70}}, {'stick': {'colorscheme': 'whiteCarbon', 'radius': 0.15}})
+
+    # Zoom to fit the entire protein in the viewer
+    viewer.zoomTo()
+
+    # Render the viewer to an HTML string that Streamlit can display
+    viewer_html = viewer._make_html()  # This is the key method for Streamlit
+    return viewer_html
+
 # Sidebar
 st.sidebar.header("🔍 Input Variant")
 st.sidebar.markdown("---")
@@ -250,8 +276,34 @@ if mutation_input and protein_choice:
                       'GAA': 'P10253', 'HEXA': 'P06865'}
         
         if protein_choice in uniprot_ids:
-            st.markdown(f"[View {protein_choice} on AlphaFold DB](https://alphafold.ebi.ac.uk/entry/{uniprot_ids[protein_choice]})")
+# --- In your results section, after making a prediction ---
+st.subheader("🏗️ 3D Protein Structure Viewer")
 
+uniprot_ids = {'GBA': 'P04062', 'CFTR': 'P13569', 'MECP2': 'P51608',
+              'GAA': 'P10253', 'HEXA': 'P06865'}
+
+if protein_choice in uniprot_ids:
+    uniprot_id = uniprot_ids[protein_choice]
+
+    # Display the interactive 3D viewer
+    structure_html = display_3d_structure(uniprot_id)
+    st.components.v1.html(structure_html, height=550)
+
+    # You can keep the link as a useful backup/alternative
+    st.markdown(f"*🔗 Open this structure in the [AlphaFold Database](https://alphafold.ebi.ac.uk/entry/{uniprot_id}) for additional tools and details.*")
+
+    # Add a legend for the color scheme
+    with st.expander("**🎨 Color Legend for this 3D Model**"):
+        st.markdown("""
+        The protein chain is colored by **predicted local confidence (pLDDT score)**:
+        - **🔴 Red (50-60)**: Low confidence - The structure here is very uncertain.
+        - **🟠 Orange/Yellow (60-80)**: Medium confidence.
+        - **🟢 Green/Blue (80-90)**: High confidence - The predicted structure is reliable.
+        - **🔵 Blue (>90)**: Very high confidence.
+        - **⚪ White Sticks**: Regions with pLDDT < 70 are also shown as thin sticks to highlight uncertainty.
+        """)
+else:
+    st.info("3D structure viewer not available for this protein selection.")
 else:
     # Welcome screen
     st.markdown("""
