@@ -275,11 +275,11 @@ if mutation_input and protein_choice:
         uniprot_ids = {'GBA': 'P04062', 'CFTR': 'P13569', 'MECP2': 'P51608', 
                       'GAA': 'P10253', 'HEXA': 'P06865'}
         
-        if protein_choice in uniprot_ids:
+if protein_choice in uniprot_ids:
 # --- In your results section, after making a prediction ---
-st.subheader("🏗️ 3D Protein Structure Viewer")
+    st.subheader("🏗️ 3D Protein Structure Viewer")
 
-uniprot_ids = {'GBA': 'P04062', 'CFTR': 'P13569', 'MECP2': 'P51608',
+    uniprot_ids = {'GBA': 'P04062', 'CFTR': 'P13569', 'MECP2': 'P51608',
               'GAA': 'P10253', 'HEXA': 'P06865'}
 
 if protein_choice in uniprot_ids:
