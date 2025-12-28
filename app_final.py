@@ -252,7 +252,7 @@ if mutation_input and protein_choice:
         with metric_col2:
             st.metric("Reliable Regions", f"{protein['confidence_ratio']:.1%}")
             st.metric("Low Confidence Areas", protein['low_conf_residues'])
-            st.metric("Protein Length", protein['total_residues"])
+            st.metric("Protein Length", protein['total_residues'])  # Fixed line
         
         st.subheader("🤖 AI Prediction")
         
