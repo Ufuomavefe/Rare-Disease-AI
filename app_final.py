@@ -291,41 +291,59 @@ if mutation_input and protein_choice:
         **Note:** This is a research prototype.
         """)
         
-        # ========== 3D VIEWER SECTION - CORRECTED ==========
-        st.subheader("🏗️ 3D Protein Structure Viewer")
+        # ========== 3D VIEWER SECTION ==========
+        st.subheader("🏗️ 3D Protein Structure")
+    
+    # UniProt ID mapping
+    uniprot_ids = {'GBA': 'P04062', 'CFTR': 'P13569', 'MECP2': 'P51608', 
+                  'GAA': 'P10253', 'HEXA': 'P06865'}
+    
+    if protein_choice in uniprot_ids:
+        uniprot_id = uniprot_ids[protein_choice]
         
-        # UniProt ID mapping
-        uniprot_ids = {'GBA': 'P04062', 'CFTR': 'P13569', 'MECP2': 'P51608', 
-                      'GAA': 'P10253', 'HEXA': 'P06865'}
+        # OPTION 1: Direct iframe to AlphaFold (Most reliable)
+        st.markdown("##### Interactive 3D Viewer")
+        viewer_html = f"""
+        <div style="width: 100%; height: 400px; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 15px;">
+            <iframe 
+                src="https://alphafold.ebi.ac.uk/entry/{uniprot_id}" 
+                width="100%" 
+                height="400"
+                style="border: none;"
+                allowfullscreen>
+            </iframe>
+        </div>
+        """
+        st.components.v1.html(viewer_html, height=420)
         
-        # Check if protein is in our mapping
-        if protein_choice in uniprot_ids:
-            uniprot_id = uniprot_ids[protein_choice]
+        # OPTION 2: Try py3Dmol as fallback
+        try:
+            st.markdown("##### Alternative 3D View")
+            structure_html = display_3d_structure(uniprot_id, width=400, height=300)
+            if "iframe" not in structure_html:  # If it's py3Dmol HTML
+                st.components.v1.html(structure_html, height=320)
+        except:
+            pass
+        
+        # Link to open directly
+        st.markdown(f"**🔗 [Open in AlphaFold Database](https://alphafold.ebi.ac.uk/entry/{uniprot_id})**")
+        
+        # Color legend
+        with st.expander("🎨 What the colors mean"):
+            st.markdown("""
+            **AlphaFold confidence colors (pLDDT score):**
+            - **🔴 Red**: Very low confidence (0-50)
+            - **🟠 Orange**: Low confidence (50-70)
+            - **🟡 Yellow**: Medium confidence (70-80)
+            - **🟢 Light Green**: Confident (80-90)
+            - **🔵 Dark Blue**: Very high confidence (90-100)
             
-            try:
-                # Display the interactive 3D viewer
-                structure_html = display_3d_structure(uniprot_id)
-                st.components.v1.html(structure_html, height=550)
-                
-                # Keep the link as a backup
-                st.markdown(f"*🔗 Open this structure in the [AlphaFold Database](https://alphafold.ebi.ac.uk/entry/{uniprot_id}) for additional tools and details.*")
-                
-                # Add a legend for the color scheme
-                with st.expander("**🎨 Color Legend for this 3D Model**"):
-                    st.markdown("""
-                    The protein chain is colored by **predicted local confidence (pLDDT score)**:
-                    - **🔴 Red (50-60)**: Low confidence - The structure here is very uncertain.
-                    - **🟠 Orange/Yellow (60-80)**: Medium confidence.
-                    - **🟢 Green/Blue (80-90)**: High confidence - The predicted structure is reliable.
-                    - **🔵 Blue (>90)**: Very high confidence.
-                    - **⚪ White Sticks**: Regions with pLDDT < 70 are also shown as thin sticks to highlight uncertainty.
-                    """)
-            except Exception as e:
-                st.warning(f"Could not load 3D structure. Error: {str(e)}")
-                st.markdown(f"[View {protein_choice} on AlphaFold DB](https://alphafold.ebi.ac.uk/entry/{uniprot_id})")
-        else:
-            st.info("3D structure viewer not available for this protein selection.")
-        # ========== END 3D VIEWER SECTION ==========
+            *Higher pLDDT scores indicate more reliable structural predictions.*
+            """)
+    
+    else:
+        st.info("3D structure not available for this protein.")
+    # ========== END 3D VIEWER ==========
 
 else:
     # Welcome screen (when no protein/mutation selected)
