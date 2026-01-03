@@ -1,4 +1,4 @@
-# app_final.py 
+# app_final.py - UPDATED VERSION WITH PDBe-KB 3D VIEWER
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -44,7 +44,7 @@ st.markdown("""
 st.markdown('<h1 class="main-header">🧬 AI-Powered Rare Disease Diagnosis</h1>', unsafe_allow_html=True)
 st.markdown('<p style="text-align: center; font-size: 1.2rem; color: #555;">Dissertation Project: AlphaFold + Machine Learning</p>', unsafe_allow_html=True)
 
-# FIXED: Complete protein data with ALL required keys
+# Protein data
 PROTEIN_DATA = {
     'GBA': {
         'disease': 'Gaucher Disease',
@@ -101,15 +101,11 @@ def load_model():
         return model, "✅ Your trained model loaded"
     except Exception as e:
         st.error(f"❌ Error loading model: {str(e)}")
-        # Create a simple demo model
         from sklearn.ensemble import RandomForestClassifier
         model = RandomForestClassifier(n_estimators=10, random_state=42)
-        
-        # Train on dummy data
         X_dummy = np.random.randn(100, 7)
         y_dummy = np.random.randint(0, 2, 100)
         model.fit(X_dummy, y_dummy)
-        
         return model, "⚠️ Using demo model (upload your .pkl file)"
 
 # Load model
@@ -124,7 +120,6 @@ def extract_position(mutation):
         r'(\d+)[A-Z]>[A-Z]',  
         r'[A-Z](\d+)[A-Z]',
     ]
-    
     for pattern in patterns:
         match = re.search(pattern, str(mutation))
         if match:
@@ -139,7 +134,6 @@ def calculate_features(protein, mutation):
             variant_plddt = protein['avg_plddt'] * 0.9
         else:
             variant_plddt = protein['avg_plddt'] * 1.0
-        
         variant_plddt += np.random.normal(0, 5)
         variant_plddt = max(20, min(95, variant_plddt))
     else:
@@ -157,37 +151,31 @@ def calculate_features(protein, mutation):
         plddt_difference
     ]
 
-def display_3d_structure(uniprot_id, width=800, height=500):
+# ========== NEW PDBe-KB 3D VIEWER FUNCTION ==========
+def display_pdbe_3d_structure(uniprot_id, width=500, height=350):
     """
-    Fetches and displays an interactive 3D structure from the AlphaFold database.
-    Colors the structure by model confidence (pLDDT).
+    Embeds the PDBe-KB 3D molecular viewer (Molstar) for a given UniProt ID.
+    This is the same viewer used on https://www.ebi.ac.uk/pdbe/pdbe-kb/proteins/
     """
-    import py3Dmol
-
-    # Construct the URL to the AlphaFold structure file (in PDB format)
-    af_structure_url = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"
-
-    # Create the py3Dmol viewer object
-    viewer = py3Dmol.view(query=f'pdb:{af_structure_url}', width=width, height=height)
-
-    # Style the entire structure as a cartoon, colored by confidence (pLDDT b-factor)
-    viewer.setStyle({'cartoon': {'colorscheme': {'prop':'b','gradient': 'roygb','min':50,'max':90}}})
-
-    # Optional: Add a visual overlay to highlight low confidence regions (pLDDT < 70)
-    viewer.addStyle({'b': {'<': 70}}, {'stick': {'colorscheme': 'whiteCarbon', 'radius': 0.15}})
-
-    # Zoom to fit the entire protein in the viewer
-    viewer.zoomTo()
-
-    # Render the viewer to an HTML string that Streamlit can display
-    viewer_html = viewer._make_html()  # This is the key method for Streamlit
+    viewer_html = f'''
+    <div style="width: {width}px; height: {height}px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <iframe 
+            src="https://www.ebi.ac.uk/pdbe/pdb-ws/molecules/{uniprot_id}/summary?viewer=molstar&embed=true" 
+            width="100%" 
+            height="100%"
+            style="border: none;"
+            title="3D Protein Structure Viewer"
+            allowfullscreen>
+        </iframe>
+    </div>
+    '''
     return viewer_html
+# ========== END 3D VIEWER FUNCTION ==========
 
 # Sidebar
 st.sidebar.header("🔍 Input Variant")
 st.sidebar.markdown("---")
 
-# FIXED: Safe protein selection
 protein_choice = st.sidebar.selectbox(
     "Select Protein:",
     list(PROTEIN_DATA.keys()),
@@ -207,8 +195,6 @@ if protein_choice:
     st.sidebar.write(f"**Disease:** {protein['disease']}")
     st.sidebar.write(f"**Structure Confidence:** {protein['avg_plddt']:.1f}/100 pLDDT")
     st.sidebar.write(f"**Reliable Regions:** {protein['confidence_ratio']:.1%}")
-
-# Find this section in your app_final.py and REPLACE it with:
 
 # Main content
 if mutation_input and protein_choice:
@@ -231,7 +217,6 @@ if mutation_input and protein_choice:
         pathogenic_prob = probabilities[1] * 100
         benign_prob = probabilities[0] * 100
     except:
-        # Fallback for demo model
         pathogenic_prob = np.random.uniform(10, 90)
         benign_prob = 100 - pathogenic_prob
         prediction = 1 if pathogenic_prob > 50 else 0
@@ -252,7 +237,7 @@ if mutation_input and protein_choice:
         with metric_col2:
             st.metric("Reliable Regions", f"{protein['confidence_ratio']:.1%}")
             st.metric("Low Confidence Areas", protein['low_conf_residues'])
-            st.metric("Protein Length", protein['total_residues'])  # Fixed line
+            st.metric("Protein Length", protein['total_residues'])
         
         st.subheader("🤖 AI Prediction")
         
@@ -278,75 +263,58 @@ if mutation_input and protein_choice:
         st.markdown("""
         **Test Examples:**
         - GBA: L444P
-        - CFTR: F508del
+        - CFTR: F508del  
         - MECP2: R255X
-        
-        **Features Analyzed:**
-        1. Protein confidence (pLDDT)
-        2. Confidence consistency
-        3. Unreliable regions
-        4. Mutation impact
-        5. Structural change
-        
-        **Note:** This is a research prototype.
         """)
         
-        # ========== 3D VIEWER SECTION ==========
-        st.subheader("🏗️ 3D Protein Structure")
-    
-    # UniProt ID mapping
-    uniprot_ids = {'GBA': 'P04062', 'CFTR': 'P13569', 'MECP2': 'P51608', 
-                  'GAA': 'P10253', 'HEXA': 'P06865'}
-    
-    if protein_choice in uniprot_ids:
-        uniprot_id = uniprot_ids[protein_choice]
+        # ========== CLEAN 3D VIEWER IN COLUMN ==========
+        st.subheader("🔬 3D Protein Structure")
         
-        # OPTION 1: Direct iframe to AlphaFold (Most reliable)
-        st.markdown("##### Interactive 3D Viewer")
-        viewer_html = f"""
-        <div style="width: 100%; height: 400px; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 15px;">
-            <iframe 
-                src="https://alphafold.ebi.ac.uk/entry/{uniprot_id}" 
-                width="100%" 
-                height="400"
-                style="border: none;"
-                allowfullscreen>
-            </iframe>
-        </div>
-        """
-        st.components.v1.html(viewer_html, height=420)
+        # UniProt ID mapping
+        uniprot_ids = {'GBA': 'P04062', 'CFTR': 'P13569', 'MECP2': 'P51608', 
+                      'GAA': 'P10253', 'HEXA': 'P06865'}
         
-        # OPTION 2: Try py3Dmol as fallback
-        try:
-            st.markdown("##### Alternative 3D View")
-            structure_html = display_3d_structure(uniprot_id, width=400, height=300)
-            if "iframe" not in structure_html:  # If it's py3Dmol HTML
-                st.components.v1.html(structure_html, height=320)
-        except:
-            pass
-        
-        # Link to open directly
-        st.markdown(f"**🔗 [Open in AlphaFold Database](https://alphafold.ebi.ac.uk/entry/{uniprot_id})**")
-        
-        # Color legend
-        with st.expander("🎨 What the colors mean"):
-            st.markdown("""
-            **AlphaFold confidence colors (pLDDT score):**
-            - **🔴 Red**: Very low confidence (0-50)
-            - **🟠 Orange**: Low confidence (50-70)
-            - **🟡 Yellow**: Medium confidence (70-80)
-            - **🟢 Light Green**: Confident (80-90)
-            - **🔵 Dark Blue**: Very high confidence (90-100)
+        if protein_choice in uniprot_ids:
+            uniprot_id = uniprot_ids[protein_choice]
             
-            *Higher pLDDT scores indicate more reliable structural predictions.*
-            """)
-    
-    else:
-        st.info("3D structure not available for this protein.")
-    # ========== END 3D VIEWER ==========
+            # Display the PDBe-KB Molstar viewer
+            viewer_html = display_pdbe_3d_structure(uniprot_id, width=450, height=320)
+            st.components.v1.html(viewer_html, height=350)
+            
+            # Controls guide
+            with st.expander("🕹️ How to use the 3D viewer"):
+                st.markdown("""
+                **Mouse Controls:**
+                - **Left-click + drag**: Rotate structure
+                - **Right-click + drag**: Pan/translate  
+                - **Scroll wheel**: Zoom in/out
+                
+                **View Options (toolbar on right):**
+                - 👁️ Show/hide molecules
+                - 🎨 Change coloring scheme
+                - 💡 Adjust lighting
+                - 📐 Measurement tools
+                
+                **Color Scheme:**
+                - By default, shows **rainbow coloring** from N-terminal (blue) to C-terminal (red)
+                - Use toolbar to switch to **chain coloring** or **secondary structure**
+                """)
+            
+            # Optional: Quick view toggle
+            col_view1, col_view2 = st.columns(2)
+            with col_view1:
+                if st.button("🔄 Reset View", use_container_width=True):
+                    st.rerun()
+            with col_view2:
+                st.link_button("📂 Open in PDBe-KB", 
+                             f"https://www.ebi.ac.uk/pdbe/pdbe-kb/proteins/{uniprot_id}")
+        
+        else:
+            st.info("3D structure not available for this protein.")
+        # ========== END 3D VIEWER ==========
 
 else:
-    # Welcome screen (when no protein/mutation selected)
+    # Welcome screen
     st.markdown("""
     ## Welcome to Your Dissertation App
     
@@ -366,7 +334,7 @@ else:
     1. Select a protein from the sidebar
     2. Enter a mutation (e.g., L444P)
     3. View AI prediction and analysis
-    4. Explore 3D structure links
+    4. Explore 3D structure
     """)
     
     # Show dataset summary
