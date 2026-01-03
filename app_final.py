@@ -1,4 +1,4 @@
-# app_final.py - UPDATED WITH WORKING 3D VIEWER
+# app_final.py - WORKING 3D VIEWER WITH 3DMOL.JS
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -39,10 +39,11 @@ st.markdown("""
     }
     .viewer-container {
         border: 2px solid #2E86AB;
-        border-radius: 8px;
+        border-radius: 10px;
         overflow: hidden;
         margin: 10px 0;
         background: white;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -115,84 +116,100 @@ def load_model():
         model.fit(X_dummy, y_dummy)
         return model, "⚠️ Using demo model (upload your .pkl file)"
 
-# ========== FIXED 3D VIEWER FUNCTIONS ==========
+# ========== 3DMOL.JS VIEWER - THIS WORKS! ==========
 
-def display_3d_viewer_pdbe(uniprot_id, width=450, height=400):
+def create_3dmol_viewer(uniprot_id, width=450, height=400):
     """
-    BEST OPTION: Uses PDBe's official embed viewer
-    This shows ONLY the 3D structure, not the full website
+    Creates a 3Dmol.js viewer that loads AlphaFold structures directly
+    This is the WORKING solution!
     """
-    af_id = f"AF-{uniprot_id}-F1"
     
-    viewer_html = f'''
-    <div class="viewer-container" style="width: {width}px; height: {height}px;">
-        <iframe 
-            src="https://www.ebi.ac.uk/pdbe/entry/pdb/{af_id.lower()}/embed" 
-            width="100%" 
-            height="100%"
-            style="border: none;"
-            frameborder="0"
-            allowfullscreen
-            title="3D Protein Structure Viewer">
-        </iframe>
-    </div>
-    '''
-    return viewer_html
-
-
-def display_3d_viewer_3dmol(uniprot_id, width=450, height=400):
-    """
-    ALTERNATIVE: Uses 3Dmol.js - very customizable
-    Great for highlighting specific residues
-    """
-    viewer_html = f'''
-    <div class="viewer-container" style="width: {width}px; height: {height}px; background: white;">
-        <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
-        <div id="viewer-{uniprot_id}" style="width: 100%; height: 100%; position: relative;"></div>
+    # AlphaFold PDB file URL
+    pdb_url = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"
+    
+    viewer_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+        <style>
+            body {{ margin: 0; padding: 0; }}
+            #viewer-container {{ 
+                width: 100%; 
+                height: {height}px; 
+                position: relative;
+                background: #f8f9fa;
+            }}
+            .loading {{
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-family: Arial, sans-serif;
+                color: #666;
+            }}
+        </style>
+    </head>
+    <body>
+        <div id="viewer-container">
+            <div class="loading">Loading 3D structure...</div>
+        </div>
+        
         <script>
-            let viewer = $3Dmol.createViewer(document.getElementById('viewer-{uniprot_id}'), {{
-                backgroundColor: 'white'
-            }});
+            let viewer = null;
             
-            // Load from PDB
-            fetch('https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb')
-                .then(response => response.text())
-                .then(data => {{
-                    viewer.addModel(data, "pdb");
-                    viewer.setStyle({{}}, {{cartoon: {{color: 'spectrum'}}}});
-                    viewer.zoomTo();
-                    viewer.render();
-                    viewer.zoom(0.8, 1000);
+            // Initialize viewer
+            function initViewer() {{
+                const container = document.getElementById('viewer-container');
+                viewer = $3Dmol.createViewer(container, {{
+                    backgroundColor: 'white'
                 }});
+                
+                // Load AlphaFold structure
+                fetch('{pdb_url}')
+                    .then(response => response.text())
+                    .then(data => {{
+                        // Remove loading message
+                        container.querySelector('.loading').style.display = 'none';
+                        
+                        // Add model to viewer
+                        viewer.addModel(data, "pdb");
+                        
+                        // Style: cartoon colored by spectrum (N->C terminal)
+                        viewer.setStyle({{}}, {{
+                            cartoon: {{
+                                color: 'spectrum'
+                            }}
+                        }});
+                        
+                        // Center and zoom
+                        viewer.zoomTo();
+                        viewer.zoom(0.8, 800);
+                        viewer.render();
+                        
+                        // Enable rotation
+                        viewer.spin(false);
+                    }})
+                    .catch(error => {{
+                        container.innerHTML = '<div class="loading" style="color: red;">Error loading structure</div>';
+                        console.error('Error:', error);
+                    }});
+            }}
+            
+            // Start when page loads
+            if (document.readyState === 'loading') {{
+                document.addEventListener('DOMContentLoaded', initViewer);
+            }} else {{
+                initViewer();
+            }}
         </script>
-    </div>
-    '''
-    return viewer_html
-
-
-def display_3d_viewer_molstar(uniprot_id, width=450, height=400):
+    </body>
+    </html>
     """
-    ALTERNATIVE: Uses Mol* viewer (official AlphaFold viewer)
-    Most feature-rich option
-    """
-    molstar_url = f"https://alphafold.ebi.ac.uk/entry/{uniprot_id}"
     
-    viewer_html = f'''
-    <div class="viewer-container" style="width: {width}px; height: {height}px;">
-        <iframe 
-            src="{molstar_url}" 
-            width="100%" 
-            height="100%"
-            style="border: none;"
-            frameborder="0"
-            allowfullscreen
-            title="3D Protein Structure Viewer">
-        </iframe>
-    </div>
-    '''
     return viewer_html
 
-# ========== END 3D VIEWER FUNCTIONS ==========
+# ========== END 3D VIEWER ==========
 
 # Load model
 model, model_message = load_model()
@@ -250,13 +267,6 @@ protein_choice = st.sidebar.selectbox(
 mutation_input = st.sidebar.text_input(
     "Enter Mutation:",
     placeholder="e.g., L444P, p.Leu444Pro"
-)
-
-# Viewer selection
-st.sidebar.markdown("---")
-viewer_option = st.sidebar.radio(
-    "3D Viewer Style:",
-    ["PDBe (Recommended)", "3Dmol.js", "Full AlphaFold"]
 )
 
 # Show protein info
@@ -339,7 +349,7 @@ if mutation_input and protein_choice:
         - MECP2: R255X
         """)
         
-        # ========== 3D VIEWER SECTION ==========
+        # ========== 3D VIEWER DISPLAY ==========
         st.subheader("🧬 3D Protein Structure")
         
         # UniProt ID mapping
@@ -354,14 +364,8 @@ if mutation_input and protein_choice:
         if protein_choice in uniprot_ids:
             uniprot_id = uniprot_ids[protein_choice]
             
-            # Display selected viewer
-            if viewer_option == "PDBe (Recommended)":
-                viewer_html = display_3d_viewer_pdbe(uniprot_id)
-            elif viewer_option == "3Dmol.js":
-                viewer_html = display_3d_viewer_3dmol(uniprot_id)
-            else:  # Full AlphaFold
-                viewer_html = display_3d_viewer_molstar(uniprot_id)
-            
+            # Create and display the 3D viewer
+            viewer_html = create_3dmol_viewer(uniprot_id, width=450, height=400)
             st.components.v1.html(viewer_html, height=420)
             
             # Viewer controls
@@ -369,32 +373,41 @@ if mutation_input and protein_choice:
                 st.markdown("""
                 **Mouse Controls:**
                 - **Left-click + drag**: Rotate structure
-                - **Right-click + drag** or **Scroll**: Zoom
-                - **Middle-click + drag**: Pan structure
+                - **Right-click + drag**: Zoom in/out
+                - **Scroll wheel**: Zoom
+                - **Middle-click + drag**: Pan/move
                 
                 **Color Scheme:**
-                - **Spectrum/Rainbow**: N-terminal (blue) → C-terminal (red)
-                - Represents protein sequence from start to end
+                - **Spectrum coloring**: Blue (N-terminus) → Red (C-terminus)
+                - Shows protein sequence from beginning to end
+                
+                **Structure Quality:**
+                - High confidence regions: Smooth, well-defined structure
+                - Low confidence regions: More flexible/disordered
                 
                 **Tips:**
-                - Double-click to reset view
-                - Use toolbar buttons for different views
-                - Look for disordered regions (flexible loops)
+                - The 3D structure loads from AlphaFold Database
+                - Cartoon representation shows protein secondary structure
+                - Look for alpha helices (spirals) and beta sheets (arrows)
                 """)
             
-            # Direct links
+            # Additional info
             st.markdown("---")
-            st.markdown("**📖 Additional Resources:**")
+            st.markdown(f"**📖 More Information:**")
             
             btn_col1, btn_col2 = st.columns(2)
             with btn_col1:
-                st.link_button("🌐 AlphaFold DB", 
-                             f"https://alphafold.ebi.ac.uk/entry/{uniprot_id}",
-                             use_container_width=True)
+                st.link_button(
+                    "🌐 AlphaFold DB", 
+                    f"https://alphafold.ebi.ac.uk/entry/{uniprot_id}",
+                    use_container_width=True
+                )
             with btn_col2:
-                st.link_button("📊 UniProt", 
-                             f"https://www.uniprot.org/uniprotkb/{uniprot_id}",
-                             use_container_width=True)
+                st.link_button(
+                    "📊 UniProt", 
+                    f"https://www.uniprot.org/uniprotkb/{uniprot_id}",
+                    use_container_width=True
+                )
         
         else:
             st.info("3D structure not available for this protein.")
@@ -408,9 +421,9 @@ else:
     This application demonstrates the integration of:
     
     ### 🧬 **AlphaFold Structural Data**
+    - Real-time 3D protein visualization
     - Verified pLDDT scores for 5 rare disease proteins
     - Structural confidence metrics
-    - Interactive 3D visualization
     
     ### 🤖 **Machine Learning Model**
     - Trained on clinical variant data
@@ -420,7 +433,7 @@ else:
     ### 🎯 **How to Use:**
     1. Select a protein from the sidebar
     2. Enter a mutation (e.g., L444P)
-    3. View AI prediction and 3D structure
+    3. View AI prediction and interactive 3D structure
     """)
     
     # Show dataset summary
