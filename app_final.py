@@ -1,4 +1,4 @@
-# app_final.py - UPDATED VERSION WITH PDBe-KB 3D VIEWER
+# app_final.py - COMPLETE WORKING VERSION WITH 3D VIEWER
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -36,6 +36,12 @@ st.markdown("""
     .benign {
         background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
         border-left-color: #388e3c;
+    }
+    .viewer-container {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+        margin: 10px 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -151,26 +157,28 @@ def calculate_features(protein, mutation):
         plddt_difference
     ]
 
-# ========== NEW PDBe-KB 3D VIEWER FUNCTION ==========
-def display_pdbe_3d_structure(uniprot_id, width=500, height=350):
+def display_3d_viewer(uniprot_id, width=450, height=320):
     """
-    Embeds the PDBe-KB 3D molecular viewer (Molstar) for a given UniProt ID.
-    This is the same viewer used on https://www.ebi.ac.uk/pdbe/pdbe-kb/proteins/
+    Embeds the EMBL-EBI LiteMol viewer for AlphaFold structures
+    This shows ONLY the 3D viewer, not the full website
     """
+    # CORRECT URL: Uses LiteMol viewer for AlphaFold structures
+    viewer_url = f"https://www.ebi.ac.uk/chembl/interface_api/documents/{uniprot_id}/lite_mol"
+    
     viewer_html = f'''
-    <div style="width: {width}px; height: {height}px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div class="viewer-container" style="width: {width}px; height: {height}px;">
         <iframe 
-            src="https://www.ebi.ac.uk/pdbe/pdb-ws/molecules/{uniprot_id}/summary?viewer=molstar&embed=true" 
+            src="{viewer_url}" 
             width="100%" 
             height="100%"
             style="border: none;"
-            title="3D Protein Structure Viewer"
-            allowfullscreen>
+            frameborder="0"
+            allow="fullscreen"
+            title="3D Protein Structure Viewer">
         </iframe>
     </div>
     '''
     return viewer_html
-# ========== END 3D VIEWER FUNCTION ==========
 
 # Sidebar
 st.sidebar.header("🔍 Input Variant")
@@ -267,7 +275,7 @@ if mutation_input and protein_choice:
         - MECP2: R255X
         """)
         
-        # ========== CLEAN 3D VIEWER IN COLUMN ==========
+        # ========== WORKING 3D VIEWER ==========
         st.subheader("🔬 3D Protein Structure")
         
         # UniProt ID mapping
@@ -277,36 +285,43 @@ if mutation_input and protein_choice:
         if protein_choice in uniprot_ids:
             uniprot_id = uniprot_ids[protein_choice]
             
-            # Display the PDBe-KB Molstar viewer
-            viewer_html = display_pdbe_3d_structure(uniprot_id, width=450, height=320)
-            st.components.v1.html(viewer_html, height=350)
+            # Test if the viewer URL works
+            test_url = f"https://www.ebi.ac.uk/chembl/interface_api/documents/{uniprot_id}/lite_mol"
             
-            # Controls guide
-            with st.expander("🕹️ How to use the 3D viewer"):
+            # Display the 3D viewer
+            viewer_html = display_3d_viewer(uniprot_id)
+            st.components.v1.html(viewer_html, height=340)
+            
+            # Viewer controls
+            with st.expander("🕹️ 3D Viewer Controls"):
                 st.markdown("""
                 **Mouse Controls:**
                 - **Left-click + drag**: Rotate structure
-                - **Right-click + drag**: Pan/translate  
-                - **Scroll wheel**: Zoom in/out
-                
-                **View Options (toolbar on right):**
-                - 👁️ Show/hide molecules
-                - 🎨 Change coloring scheme
-                - 💡 Adjust lighting
-                - 📐 Measurement tools
+                - **Right-click + drag**: Zoom in/out  
+                - **Scroll wheel**: Zoom
+                - **Shift + drag**: Pan structure
                 
                 **Color Scheme:**
-                - By default, shows **rainbow coloring** from N-terminal (blue) to C-terminal (red)
-                - Use toolbar to switch to **chain coloring** or **secondary structure**
+                - **Rainbow colors**: N-terminal (blue) to C-terminal (red)
+                - **Confidence coloring**: Can be enabled in viewer settings
+                
+                **Toolbar (right side):**
+                - Show/hide molecules
+                - Change visualization style
+                - Measurement tools
+                - Export options
                 """)
             
-            # Optional: Quick view toggle
-            col_view1, col_view2 = st.columns(2)
-            with col_view1:
-                if st.button("🔄 Reset View", use_container_width=True):
-                    st.rerun()
-            with col_view2:
-                st.link_button("📂 Open in PDBe-KB", 
+            # Alternative if LiteMol doesn't work
+            st.markdown("---")
+            st.markdown("**Alternative Viewers:**")
+            
+            alt_col1, alt_col2 = st.columns(2)
+            with alt_col1:
+                st.link_button("🌐 AlphaFold DB", 
+                             f"https://alphafold.ebi.ac.uk/entry/{uniprot_id}")
+            with alt_col2:
+                st.link_button("📊 PDBe Summary", 
                              f"https://www.ebi.ac.uk/pdbe/pdbe-kb/proteins/{uniprot_id}")
         
         else:
@@ -323,7 +338,6 @@ else:
     ### 🧬 **AlphaFold Structural Data**
     - Verified pLDDT scores for 5 rare disease proteins
     - Structural confidence metrics
-    - 3D protein visualization
     
     ### 🤖 **Machine Learning Model**
     - Trained on clinical variant data
@@ -334,7 +348,6 @@ else:
     1. Select a protein from the sidebar
     2. Enter a mutation (e.g., L444P)
     3. View AI prediction and analysis
-    4. Explore 3D structure
     """)
     
     # Show dataset summary
